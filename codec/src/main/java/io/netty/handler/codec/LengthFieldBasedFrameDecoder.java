@@ -400,11 +400,15 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
             discardingTooLongFrame(in);
         }
 
+        //lengthFieldEndOffset等于偏移量+长度域长度
         if (in.readableBytes() < lengthFieldEndOffset) {
             return null;
         }
 
+        //actualLengthFieldOffset长度域的位置
         int actualLengthFieldOffset = in.readerIndex() + lengthFieldOffset;
+
+        //内容长度
         long frameLength = getUnadjustedFrameLength(in, actualLengthFieldOffset, lengthFieldLength, byteOrder);
 
         if (frameLength < 0) {

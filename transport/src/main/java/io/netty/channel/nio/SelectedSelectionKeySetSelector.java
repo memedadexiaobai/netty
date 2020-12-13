@@ -22,7 +22,8 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.Set;
 
 final class SelectedSelectionKeySetSelector extends Selector {
-    private final SelectedSelectionKeySet selectionKeys;
+    private final SelectedSelectionKeySet selectionKeys; //这个是netty替换的
+    //类中selectedKeys替换过数据类型的Selector 这个是默认的原来的Select
     private final Selector delegate;
 
     SelectedSelectionKeySetSelector(Selector delegate, SelectedSelectionKeySet selectionKeys) {

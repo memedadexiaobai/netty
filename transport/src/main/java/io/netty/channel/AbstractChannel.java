@@ -68,6 +68,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *        the parent of this channel. {@code null} if there's no parent.
      */
     protected AbstractChannel(Channel parent) {
+        //new ServerSocketChannel
         this.parent = parent;
         id = newId();
         unsafe = newUnsafe();
@@ -83,6 +84,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected AbstractChannel(Channel parent, ChannelId id) {
         this.parent = parent;
         this.id = id;
+        //AbstractNioMessageChannel unsafe =newUnsafe()
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
     }
@@ -418,7 +420,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private RecvByteBufAllocator.Handle recvHandle;
         private boolean inFlush0;
-        /** true if the channel has never been registered, false otherwise */
+        /** 如果通道从未注册，则为真，否则为假 */
         private boolean neverRegistered = true;
 
         private void assertEventLoop() {
@@ -463,8 +465,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
+            //promise=DefaultChannelPromise
+            //eventLoop=SingleThreadEventLoop
+
+            //this.eventLoop=NioEventLoop==>SingleThreadEventLoop.this
             AbstractChannel.this.eventLoop = eventLoop;
 
+            //他们最终都调用了register0   eventLoop.inEventLoop()的作用？
             if (eventLoop.inEventLoop()) {
                 register0(promise);
             } else {
@@ -472,6 +479,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     eventLoop.execute(new Runnable() {
                         @Override
                         public void run() {
+                            System.out.println("register0");
                             register0(promise);
                         }
                     });
@@ -488,37 +496,44 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private void register0(ChannelPromise promise) {
             try {
-                // check if the channel is still open as it could be closed in the mean time when the register
-                // call was outside of the eventLoop
+                // 检查通道是否仍然打开，因为它可以在寄存器的平均时间内关闭
+                // 调用在eventLoop之外
+
+                //promise=DefaultChannelPromise
                 if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
                 boolean firstRegistration = neverRegistered;
+                //调用NioServerSocketChannel 通过反射创建出来nio底层channel的register方法  选择器看不同操作系统
                 doRegister();
                 neverRegistered = false;
                 registered = true;
 
-                // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                // user may already fire events through the pipeline in the ChannelFutureListener.
+                // 确保在实际通知承诺之前调用handlerAdded(…)。这是需要的
+                // 用户可能已经通过ChannelFutureListener中的管道触发事件。
+
+                //会执行handlerAdded方法
                 pipeline.invokeHandlerAddedIfNeeded();
 
                 safeSetSuccess(promise);
+                //会执行channelRegistered
                 pipeline.fireChannelRegistered();
-                // Only fire a channelActive if the channel has never been registered. This prevents firing
-                // multiple channel actives if the channel is deregistered and re-registered.
+
+                // 只有当通道从未被注册时，才激活该通道。这可以防止解雇
+                // 如果取消注册并重新注册通道，则多个通道将激活。
                 if (isActive()) {
                     if (firstRegistration) {
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
-                        // This channel was registered before and autoRead() is set. This means we need to begin read
-                        // again so that we process inbound data.
+                        // 这个通道之前已经注册，并设置了autoRead()。这意味着我们需要开始读取
+                        // 这样我们就可以处理入站数据。
                         //
                         // See https://github.com/netty/netty/issues/4805
                         beginRead();
                     }
                 }
             } catch (Throwable t) {
-                // Close the channel directly to avoid FD leak.
+                // 直接关闭通道，避免FD泄漏。
                 closeForcibly();
                 closeFuture.setClosed();
                 safeSetFailure(promise, t);
@@ -556,6 +571,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             if (!wasActive && isActive()) {
+                //线程执行调用channelActive方法
                 invokeLater(new Runnable() {
                     @Override
                     public void run() {

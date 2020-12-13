@@ -266,7 +266,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         }
 
         final Map<AttributeKey<?>, Object> attrs = attrs0();
-        synchronized (attrs) {
+        synchronized (attrs) { //attrs
             for (Entry<AttributeKey<?>, Object> e: attrs.entrySet()) {
                 channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
             }
